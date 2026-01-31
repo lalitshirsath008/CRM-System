@@ -1,5 +1,5 @@
 
-import { User, UserRole, LeaveRequest, AttendanceRecord } from '../types';
+import { User, UserRole, LeaveRequest, AttendanceRecord } from '../types.ts';
 
 export const mockUsers: User[] = [
   {

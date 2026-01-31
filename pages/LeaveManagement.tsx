@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Check, X, Clock, Calendar, MessageCircle } from 'lucide-react';
-import { LeaveRequest, UserRole } from '../types';
-import { api } from '../services/api';
+import { Plus, Check, X, Calendar } from 'lucide-react';
+import { LeaveRequest, UserRole } from '../types.ts';
+import { api } from '../services/api.ts';
 
 const LeaveManagement: React.FC<{ role: UserRole, userId: string }> = ({ role, userId }) => {
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
@@ -15,11 +15,16 @@ const LeaveManagement: React.FC<{ role: UserRole, userId: string }> = ({ role, u
 
   const fetchLeaves = async () => {
     setIsLoading(true);
-    const data = role === UserRole.EMPLOYEE 
-      ? await api.leaves.getByUserId(userId) 
-      : await api.leaves.getAll();
-    setLeaves(data);
-    setIsLoading(false);
+    try {
+        const data = role === UserRole.EMPLOYEE 
+          ? await api.leaves.getByUserId(userId) 
+          : await api.leaves.getAll();
+        setLeaves(data);
+    } catch (error) {
+        console.error("Failed to fetch leaves", error);
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   const handleUpdateStatus = async (id: string, status: 'approved' | 'rejected') => {
@@ -75,9 +80,9 @@ const LeaveManagement: React.FC<{ role: UserRole, userId: string }> = ({ role, u
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
-                  <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400">Loading leaves...</td></tr>
+                  <tr><td colSpan={role !== UserRole.EMPLOYEE ? 6 : 5} className="px-6 py-12 text-center text-slate-400">Loading leaves...</td></tr>
               ) : leaves.length === 0 ? (
-                  <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400">No leave requests found.</td></tr>
+                  <tr><td colSpan={role !== UserRole.EMPLOYEE ? 6 : 5} className="px-6 py-12 text-center text-slate-400">No leave requests found.</td></tr>
               ) : leaves.map((leave) => (
                 <tr key={leave.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4">
@@ -130,7 +135,6 @@ const LeaveManagement: React.FC<{ role: UserRole, userId: string }> = ({ role, u
         </div>
       </div>
 
-      {/* Simplified Modal */}
       {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
               <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200">

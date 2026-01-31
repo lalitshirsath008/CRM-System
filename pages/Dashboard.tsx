@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { 
   Users, 
   Calendar, 
@@ -19,14 +19,14 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { UserRole, User, AttendanceRecord } from '../types';
+import { UserRole, User } from '../types.ts';
 
 interface DashboardProps {
   user: User;
   stats: any;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user, stats }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const isEmployee = user.role === UserRole.EMPLOYEE;
   
   const data = [
@@ -161,7 +161,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, stats }) => {
                                     <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden">
                                         <img src={`https://picsum.photos/seed/user${item}/100`} alt="" />
                                     </div>
-                                    <span className="font-medium text-slate-700">John Doe</span>
+                                    <span className="font-medium text-slate-700">Employee {item}</span>
                                 </div>
                             </td>
                             <td className="px-6 py-4 text-slate-600 text-sm">May 18, 2024</td>

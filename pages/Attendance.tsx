@@ -1,13 +1,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Square, MapPin, AlertCircle, Clock } from 'lucide-react';
-import { AttendanceRecord, TaskTimer } from '../types';
+import { Play, Pause, Square, AlertCircle, Clock } from 'lucide-react';
+import { AttendanceRecord } from '../types.ts';
 
 const AttendancePage: React.FC<{ userId: string }> = ({ userId }) => {
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [checkInTime, setCheckInTime] = useState<string | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [isTaskRunning, setIsTaskRunning] = useState(false);
   const timerRef = useRef<number | null>(null);
 
   useEffect(() => {

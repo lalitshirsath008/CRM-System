@@ -6,14 +6,13 @@ import {
   CalendarCheck, 
   MessageSquare, 
   Clock, 
-  Settings, 
   LogOut, 
   Menu, 
   X,
   Bell,
   FileText
 } from 'lucide-react';
-import { UserRole } from '../types';
+import { UserRole } from '../types.ts';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -47,7 +46,6 @@ const Layout: React.FC<LayoutProps> = ({
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
-      {/* Mobile Backdrop */}
       {!isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-20 md:hidden"
@@ -55,7 +53,6 @@ const Layout: React.FC<LayoutProps> = ({
         />
       )}
 
-      {/* Sidebar */}
       <aside 
         className={`${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
@@ -99,9 +96,7 @@ const Layout: React.FC<LayoutProps> = ({
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Header */}
         <header className="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center space-x-4">
             <button onClick={() => setSidebarOpen(true)} className="md:hidden text-slate-500 p-2">
@@ -130,7 +125,6 @@ const Layout: React.FC<LayoutProps> = ({
           </div>
         </header>
 
-        {/* Page Content */}
         <div className="flex-1 overflow-y-auto p-8 bg-slate-50/50">
           {children}
         </div>

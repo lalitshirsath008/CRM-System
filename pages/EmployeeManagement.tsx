@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, Trash2, Mail, Phone, MoreHorizontal } from 'lucide-react';
-import { User, UserRole } from '../types';
-import { api } from '../services/api';
+import { Plus, Search, Edit2, Trash2, MoreHorizontal, X } from 'lucide-react';
+import { User, UserRole } from '../types.ts';
+import { api } from '../services/api.ts';
 
 const EmployeeManagement: React.FC = () => {
   const [employees, setEmployees] = useState<User[]>([]);
@@ -15,9 +15,14 @@ const EmployeeManagement: React.FC = () => {
 
   const fetchEmployees = async () => {
     setIsLoading(true);
-    const data = await api.users.getAll();
-    setEmployees(data);
-    setIsLoading(false);
+    try {
+        const data = await api.users.getAll();
+        setEmployees(data);
+    } catch (error) {
+        console.error("Failed to load employees", error);
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   return (
@@ -186,11 +191,5 @@ const EmployeeManagement: React.FC = () => {
     </div>
   );
 };
-
-const X = ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
-    </svg>
-);
 
 export default EmployeeManagement;

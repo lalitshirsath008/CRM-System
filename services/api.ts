@@ -1,8 +1,7 @@
 
-import { User, UserRole, LeaveRequest, AttendanceRecord } from '../types';
-import { mockUsers, mockLeaves, mockAttendance } from './mockData';
+import { User, UserRole, LeaveRequest, AttendanceRecord } from '../types.ts';
+import { mockUsers, mockLeaves, mockAttendance } from './mockData.ts';
 
-// Simulated latency
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const api = {

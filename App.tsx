@@ -1,14 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { User, UserRole } from './types';
-import { mockUsers } from './services/mockData';
-import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import EmployeeManagement from './pages/EmployeeManagement';
-import AttendancePage from './pages/Attendance';
-import LeaveManagement from './pages/LeaveManagement';
-import ChatPage from './pages/Chat';
-import LoginPage from './pages/Login';
+import { User, UserRole } from './types.ts';
+import { mockUsers } from './services/mockData.ts';
+import Layout from './components/Layout.tsx';
+import Dashboard from './pages/Dashboard.tsx';
+import EmployeeManagement from './pages/EmployeeManagement.tsx';
+import AttendancePage from './pages/Attendance.tsx';
+import LeaveManagement from './pages/LeaveManagement.tsx';
+import ChatPage from './pages/Chat.tsx';
+import LoginPage from './pages/Login.tsx';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -16,7 +16,6 @@ const App: React.FC = () => {
   const [isAuthLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    // Check local storage for persistent session simulation
     const savedUser = localStorage.getItem('nexus_user');
     if (savedUser) {
         setUser(JSON.parse(savedUser));
