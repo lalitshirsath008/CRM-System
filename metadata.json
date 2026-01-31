@@ -1,0 +1,7 @@
+{
+  "name": "NexusOffice CRM & Employee Management",
+  "description": "A high-end, production-ready corporate office management system featuring real-time attendance, task tracking, leave management, and secure role-based access control.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
