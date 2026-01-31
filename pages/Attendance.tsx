@@ -1,13 +1,29 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Square, AlertCircle, Clock } from 'lucide-react';
-import { AttendanceRecord } from '../types.ts';
+import { Play, Pause, Square, AlertCircle, Clock, Loader2 } from 'lucide-react';
+import { User } from '../types.ts';
+import { api } from '../services/api.ts';
 
-const AttendancePage: React.FC<{ userId: string }> = ({ userId }) => {
+const AttendancePage: React.FC<{ user: User }> = ({ user }) => {
   const [isCheckedIn, setIsCheckedIn] = useState(false);
-  const [checkInTime, setCheckInTime] = useState<string | null>(null);
+  const [activeRecord, setActiveRecord] = useState<any>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [loading, setLoading] = useState(true);
   const timerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const checkStatus = async () => {
+        const record = await api.attendance.getToday(user.id);
+        if (record && !record.checkOut) {
+            setActiveRecord(record);
+            setIsCheckedIn(true);
+            const start = new Date(record.checkIn).getTime();
+            setElapsedTime(Math.floor((new Date().getTime() - start) / 1000));
+        }
+        setLoading(false);
+    };
+    checkStatus();
+  }, [user.id]);
 
   useEffect(() => {
     if (isCheckedIn && !timerRef.current) {
@@ -23,16 +39,32 @@ const AttendancePage: React.FC<{ userId: string }> = ({ userId }) => {
     };
   }, [isCheckedIn]);
 
-  const handleCheckIn = () => {
-    const now = new Date();
-    setIsCheckedIn(true);
-    setCheckInTime(now.toLocaleTimeString());
-    setElapsedTime(0);
+  const handleCheckIn = async () => {
+    setLoading(true);
+    try {
+        const res = await api.attendance.checkIn(user);
+        setActiveRecord(res);
+        setIsCheckedIn(true);
+        setElapsedTime(0);
+    } catch (e) {
+        alert("Check-in failed. Please try again.");
+    } finally {
+        setLoading(false);
+    }
   };
 
-  const handleCheckOut = () => {
-    setIsCheckedIn(false);
-    setCheckInTime(null);
+  const handleCheckOut = async () => {
+    if (!activeRecord?.id) return;
+    setLoading(true);
+    try {
+        await api.attendance.checkOut(activeRecord.id);
+        setIsCheckedIn(false);
+        setActiveRecord(null);
+    } catch (e) {
+        alert("Check-out failed.");
+    } finally {
+        setLoading(false);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -42,10 +74,18 @@ const AttendancePage: React.FC<{ userId: string }> = ({ userId }) => {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  if (loading && !isCheckedIn) {
+      return (
+          <div className="flex flex-col items-center justify-center h-64 gap-4">
+              <Loader2 className="animate-spin text-blue-600" size={40} />
+              <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Syncing Cloud Session...</p>
+          </div>
+      );
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-500">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Main Control Card */}
         <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
           <div className="bg-slate-900 p-8 text-white text-center relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-10">
@@ -57,81 +97,72 @@ const AttendancePage: React.FC<{ userId: string }> = ({ userId }) => {
             </h2>
             <div className="flex items-center justify-center space-x-2 text-sm">
                 <div className={`w-2 h-2 rounded-full ${isCheckedIn ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500'}`} />
-                <span className="text-slate-300 font-medium">{isCheckedIn ? 'Active Session' : 'No Active Session'}</span>
+                <span className="text-slate-300 font-medium">{isCheckedIn ? 'Active Session' : 'Offline'}</span>
             </div>
           </div>
 
           <div className="p-8 space-y-6">
-            <div className="flex flex-col space-y-4">
-              {!isCheckedIn ? (
+            {!isCheckedIn ? (
                 <button 
+                  disabled={loading}
                   onClick={handleCheckIn}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl flex items-center justify-center space-x-3 transition-all active:scale-95 shadow-lg shadow-blue-500/30"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl flex items-center justify-center space-x-3 transition-all active:scale-95 shadow-lg shadow-blue-500/30 disabled:opacity-50"
                 >
-                  <Play size={24} />
-                  <span>Office Check-In</span>
+                  {loading ? <Loader2 className="animate-spin" /> : <Play size={24} />}
+                  <span>Check-In to Office</span>
                 </button>
               ) : (
                 <button 
+                  disabled={loading}
                   onClick={handleCheckOut}
-                  className="w-full bg-slate-900 hover:bg-black text-white font-bold py-4 px-6 rounded-2xl flex items-center justify-center space-x-3 transition-all active:scale-95 shadow-lg"
+                  className="w-full bg-slate-900 hover:bg-black text-white font-bold py-4 px-6 rounded-2xl flex items-center justify-center space-x-3 transition-all active:scale-95 shadow-lg disabled:opacity-50"
                 >
-                  <Square size={24} />
-                  <span>Office Check-Out</span>
+                  {loading ? <Loader2 className="animate-spin" /> : <Square size={24} />}
+                  <span>Finish Today's Work</span>
                 </button>
               )}
-            </div>
 
             <div className="pt-6 border-t border-slate-100 grid grid-cols-2 gap-4">
                 <div className="bg-slate-50 p-4 rounded-2xl">
-                    <p className="text-xs text-slate-500 font-bold uppercase mb-1">Clocked In At</p>
-                    <p className="text-lg font-bold text-slate-800">{checkInTime || '--:--'}</p>
+                    <p className="text-xs text-slate-500 font-bold uppercase mb-1">Start Time</p>
+                    <p className="text-lg font-bold text-slate-800">
+                        {activeRecord ? new Date(activeRecord.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                    </p>
                 </div>
                 <div className="bg-slate-50 p-4 rounded-2xl">
                     <p className="text-xs text-slate-500 font-bold uppercase mb-1">Status</p>
-                    <p className={`text-lg font-bold ${isCheckedIn ? 'text-emerald-600' : 'text-slate-400'}`}>{isCheckedIn ? 'In Office' : 'Offline'}</p>
+                    <p className={`text-lg font-bold ${isCheckedIn ? 'text-emerald-600' : 'text-slate-400'}`}>{isCheckedIn ? 'Working' : 'Not Clocked In'}</p>
                 </div>
             </div>
           </div>
         </div>
 
-        {/* Info & Task Card */}
         <div className="space-y-6">
             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2 tracking-tight">
                     <AlertCircle size={18} className="text-blue-600" />
-                    Office Guidelines
+                    Today's Context
                 </h3>
-                <ul className="space-y-3 text-sm text-slate-600">
-                    <li className="flex items-start gap-3">
-                        <div className="w-5 h-5 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 text-[10px] mt-0.5">1</div>
-                        Check-in window is between 08:30 AM - 09:15 AM.
-                    </li>
-                    <li className="flex items-start gap-3">
-                        <div className="w-5 h-5 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 text-[10px] mt-0.5">2</div>
-                        Late check-in requires a valid reason for manager approval.
-                    </li>
-                    <li className="flex items-start gap-3">
-                        <div className="w-5 h-5 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 text-[10px] mt-0.5">3</div>
-                        Minimum 8.5 hours of work time is required daily.
-                    </li>
-                </ul>
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-500 font-medium">Daily Target</span>
+                        <span className="font-bold">8.5 Hours</span>
+                    </div>
+                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div 
+                            className="bg-blue-600 h-full transition-all duration-1000" 
+                            style={{ width: `${Math.min((elapsedTime / (8.5 * 3600)) * 100, 100)}%` }} 
+                        />
+                    </div>
+                </div>
             </div>
 
-            <div className="bg-gradient-to-br from-indigo-600 to-blue-700 p-6 rounded-3xl text-white shadow-xl shadow-blue-600/20">
-                <h3 className="font-bold text-lg mb-4">Task Timer</h3>
-                <input 
-                    type="text" 
-                    placeholder="What are you working on?" 
-                    className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 placeholder-white/50 text-white focus:outline-none focus:ring-2 focus:ring-white/30 mb-4"
-                />
-                <div className="flex gap-3">
-                    <button className="flex-1 bg-white text-blue-700 font-bold py-3 rounded-xl hover:bg-white/90 transition-colors">
-                        Start Task
-                    </button>
-                    <button className="bg-white/20 p-3 rounded-xl hover:bg-white/30 transition-colors">
-                        <Pause size={20} />
-                    </button>
+            <div className="bg-gradient-to-br from-indigo-600 to-blue-700 p-8 rounded-3xl text-white shadow-xl">
+                <h3 className="font-bold text-xl mb-2">Cloud Persistence</h3>
+                <p className="text-blue-100/70 text-sm mb-6 leading-relaxed">Your attendance data is synced across all devices. Refreshing or closing this tab will not stop your timer.</p>
+                <div className="flex items-center gap-3 text-xs font-black uppercase tracking-widest text-emerald-400">
+                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
+                    Secured Sync Active
                 </div>
             </div>
         </div>

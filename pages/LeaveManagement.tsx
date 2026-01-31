@@ -1,35 +1,46 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Check, X, Calendar } from 'lucide-react';
-import { LeaveRequest, UserRole } from '../types.ts';
+import { Plus, Check, X, Calendar, AlertCircle } from 'lucide-react';
+import { LeaveRequest, UserRole, User } from '../types.ts';
 import { api } from '../services/api.ts';
 
-const LeaveManagement: React.FC<{ role: UserRole, userId: string }> = ({ role, userId }) => {
+const LeaveManagement: React.FC<{ role: UserRole, userId: string, user: User }> = ({ role, userId, user }) => {
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [isModalOpen, setModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [newLeave, setNewLeave] = useState({
+    type: 'sick',
+    startDate: '',
+    endDate: '',
+    reason: ''
+  });
 
   useEffect(() => {
-    fetchLeaves();
-  }, []);
-
-  const fetchLeaves = async () => {
     setIsLoading(true);
-    try {
-        const data = role === UserRole.EMPLOYEE 
-          ? await api.leaves.getByUserId(userId) 
-          : await api.leaves.getAll();
+    // Real-time subscription for leaves
+    // Fix: Pass user.companyId as the first argument to match the api.leaves.subscribe signature
+    const unsubscribe = api.leaves.subscribe(user.companyId, (data) => {
         setLeaves(data);
-    } catch (error) {
-        console.error("Failed to fetch leaves", error);
-    } finally {
         setIsLoading(false);
-    }
-  };
+    }, role === UserRole.EMPLOYEE ? userId : undefined);
+
+    return () => unsubscribe();
+  }, [role, userId, user.companyId]);
 
   const handleUpdateStatus = async (id: string, status: 'approved' | 'rejected') => {
-    await api.leaves.updateStatus(id, status);
-    fetchLeaves();
+    await api.leaves.updateStatus(id, status, user);
+    // No need to manually fetch, the subscription handles the update
+  };
+
+  const handleApplyLeave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newLeave.startDate || !newLeave.endDate || !newLeave.reason) {
+        alert("Please fill in all fields.");
+        return;
+    }
+    await api.leaves.create(newLeave as any, user);
+    setModalOpen(false);
+    setNewLeave({ type: 'sick', startDate: '', endDate: '', reason: '' });
   };
 
   return (
@@ -37,7 +48,7 @@ const LeaveManagement: React.FC<{ role: UserRole, userId: string }> = ({ role, u
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Leave Management</h2>
-          <p className="text-slate-500">Track and manage employee time-off requests.</p>
+          <p className="text-slate-500">Track and manage employee time-off requests in real-time.</p>
         </div>
         {role === UserRole.EMPLOYEE && (
             <button 
@@ -80,7 +91,7 @@ const LeaveManagement: React.FC<{ role: UserRole, userId: string }> = ({ role, u
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
-                  <tr><td colSpan={role !== UserRole.EMPLOYEE ? 6 : 5} className="px-6 py-12 text-center text-slate-400">Loading leaves...</td></tr>
+                  <tr><td colSpan={role !== UserRole.EMPLOYEE ? 6 : 5} className="px-6 py-12 text-center text-slate-400">Connecting to cloud storage...</td></tr>
               ) : leaves.length === 0 ? (
                   <tr><td colSpan={role !== UserRole.EMPLOYEE ? 6 : 5} className="px-6 py-12 text-center text-slate-400">No leave requests found.</td></tr>
               ) : leaves.map((leave) => (
@@ -98,7 +109,7 @@ const LeaveManagement: React.FC<{ role: UserRole, userId: string }> = ({ role, u
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-600 max-w-xs truncate">{leave.reason}</td>
                   <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-colors duration-300 ${
                       leave.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
                       leave.status === 'rejected' ? 'bg-rose-100 text-rose-700' :
                       'bg-amber-100 text-amber-700'
@@ -112,19 +123,21 @@ const LeaveManagement: React.FC<{ role: UserRole, userId: string }> = ({ role, u
                             <div className="flex gap-2">
                                 <button 
                                     onClick={() => handleUpdateStatus(leave.id, 'approved')}
+                                    title="Approve"
                                     className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors"
                                 >
                                     <Check size={16} />
                                 </button>
                                 <button 
                                     onClick={() => handleUpdateStatus(leave.id, 'rejected')}
+                                    title="Reject"
                                     className="p-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-600 hover:text-white transition-colors"
                                 >
                                     <X size={16} />
                                 </button>
                             </div>
                         ) : (
-                            <span className="text-xs text-slate-400 italic">No actions</span>
+                            <span className="text-xs text-slate-400 italic">Handled</span>
                         )}
                     </td>
                   )}
@@ -143,36 +156,60 @@ const LeaveManagement: React.FC<{ role: UserRole, userId: string }> = ({ role, u
                         <h3 className="text-xl font-bold">New Leave Application</h3>
                         <button onClick={() => setModalOpen(false)}><X className="text-slate-400" /></button>
                       </div>
-                      <div className="space-y-4">
+                      <form onSubmit={handleApplyLeave} className="space-y-4">
                           <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">Leave Type</label>
-                              <select className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                  <option>Sick Leave</option>
-                                  <option>Casual Leave</option>
-                                  <option>Paid Leave</option>
+                              <select 
+                                value={newLeave.type}
+                                onChange={e => setNewLeave({...newLeave, type: e.target.value})}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              >
+                                  <option value="sick">Sick Leave</option>
+                                  <option value="casual">Casual Leave</option>
+                                  <option value="paid">Paid Leave</option>
+                                  <option value="unpaid">Unpaid Leave</option>
                               </select>
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                               <div>
                                   <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
-                                  <input type="date" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                  <input 
+                                    type="date" 
+                                    required
+                                    value={newLeave.startDate}
+                                    onChange={e => setNewLeave({...newLeave, startDate: e.target.value})}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                                  />
                               </div>
                               <div>
                                   <label className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
-                                  <input type="date" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                  <input 
+                                    type="date" 
+                                    required
+                                    value={newLeave.endDate}
+                                    onChange={e => setNewLeave({...newLeave, endDate: e.target.value})}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                                  />
                               </div>
                           </div>
                           <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">Reason</label>
-                              <textarea rows={3} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Please provide a brief reason..."></textarea>
+                              <textarea 
+                                required
+                                rows={3} 
+                                value={newLeave.reason}
+                                onChange={e => setNewLeave({...newLeave, reason: e.target.value})}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                                placeholder="Please provide a brief reason..."
+                              ></textarea>
                           </div>
                           <button 
+                            type="submit"
                             className="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-500/30 active:scale-95 transition-all mt-4"
-                            onClick={() => setModalOpen(false)}
                           >
                               Submit Application
                           </button>
-                      </div>
+                      </form>
                   </div>
               </div>
           </div>

@@ -6,40 +6,76 @@ export enum UserRole {
 }
 
 export interface User {
-  id: string;
+  id: string; // This will be the Firebase UID
   employeeId: string;
   name: string;
   email: string;
   role: UserRole;
   department: string;
+  companyId: string; // Added for multi-tenancy
   mobile: string;
   joiningDate: string;
   status: 'active' | 'inactive';
+  presence: 'online' | 'idle' | 'offline';
+  lastSeen: string;
+  leaveBalance: {
+    sick: number;
+    casual: number;
+    paid: number;
+  };
   avatar?: string;
+}
+
+export interface Task {
+  id: string;
+  companyId: string;
+  title: string;
+  description: string;
+  assignedTo: string;
+  assignedToName: string;
+  assignedByName: string;
+  status: 'todo' | 'in-progress' | 'completed';
+  priority: 'low' | 'medium' | 'high';
+  createdAt: string;
+  timeSpent: number;
+  timerStartedAt?: string;
+}
+
+export interface AuditLog {
+  id: string;
+  companyId: string;
+  userId: string;
+  userName: string;
+  action: string;
+  details: string;
+  timestamp: string;
+  ip: string;
+}
+
+export interface Announcement {
+  id: string;
+  companyId: string;
+  title: string;
+  content: string;
+  authorName: string;
+  priority: 'info' | 'urgent';
+  createdAt: string;
 }
 
 export interface AttendanceRecord {
   id: string;
+  companyId: string;
   userId: string;
   date: string;
   checkIn: string;
   checkOut?: string;
-  duration: number; // minutes
-  isLate: boolean;
-}
-
-export interface TaskTimer {
-  id: string;
-  userId: string;
-  taskName: string;
-  startTime: string;
-  endTime?: string;
   duration: number;
-  status: 'running' | 'paused' | 'completed';
+  isLate: boolean;
 }
 
 export interface LeaveRequest {
   id: string;
+  companyId: string;
   userId: string;
   userName: string;
   type: 'casual' | 'sick' | 'paid' | 'unpaid';
@@ -49,15 +85,4 @@ export interface LeaveRequest {
   status: 'pending' | 'approved' | 'rejected';
   managerComment?: string;
   createdAt: string;
-}
-
-export interface ChatMessage {
-  id: string;
-  senderId: string;
-  senderName: string;
-  recipientId?: string; // empty for group
-  groupId?: string;
-  content: string;
-  timestamp: string;
-  isRead: boolean;
 }

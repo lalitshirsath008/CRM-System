@@ -4,26 +4,22 @@ import { Plus, Search, Edit2, Trash2, MoreHorizontal, X } from 'lucide-react';
 import { User, UserRole } from '../types.ts';
 import { api } from '../services/api.ts';
 
-const EmployeeManagement: React.FC = () => {
+// Added companyId prop to satisfy api.users.getAll signature
+const EmployeeManagement: React.FC<{ companyId: string }> = ({ companyId }) => {
   const [employees, setEmployees] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setModalOpen] = useState(false);
 
+  // Fix: Provided companyId as the first argument to api.users.getAll
   useEffect(() => {
-    fetchEmployees();
-  }, []);
-
-  const fetchEmployees = async () => {
     setIsLoading(true);
-    try {
-        const data = await api.users.getAll();
+    const unsubscribe = api.users.getAll(companyId, (data) => {
         setEmployees(data);
-    } catch (error) {
-        console.error("Failed to load employees", error);
-    } finally {
         setIsLoading(false);
-    }
-  };
+    });
+    
+    return () => unsubscribe();
+  }, [companyId]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
